@@ -19,7 +19,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Listen for Firebase auth state changes
   useEffect(() => {
     // Wait for Pi SDK to be ready before initializing
-    let checkInterval: NodeJS.Timeout | null = null;
+    let checkInterval: ReturnType<typeof setInterval> | null = null;
     
     const initPiWhenReady = () => {
       // Check if Pi SDK is already ready
