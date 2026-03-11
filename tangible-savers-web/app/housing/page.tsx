@@ -1,71 +1,73 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { collection, getDocs, doc, updateDoc } from 'firebase/firestore';
+import React, { useEffect, useState, useMemo } from 'react';
+import { collection, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/lib/authContext';
 import { linkUserToEstate } from '@/lib/piAuth';
-import { Estate, Property } from '@/lib/types';
+import { Estate } from '@/lib/types';
 import Link from 'next/link';
+
+// Sample estates for demo (defined outside component)
+const sampleEstatesData: Estate[] = [
+  {
+    id: 'estate1',
+    name: 'Sunrise Gardens Estate',
+    location: 'Mikocheni, Dar es Salaam',
+    description: 'Modern residential estate with excellent amenities',
+    monthlyDues: 25,
+    currency: 'Pi',
+    totalUnits: 120,
+    occupiedUnits: 95,
+    amenities: ['Security', 'Pool', 'Gym', 'Parking'],
+    image: '/IMG-20250709-WA0014.jpg'
+  },
+  {
+    id: 'estate2',
+    name: 'Lakeside View Apartments',
+    location: 'Oyster Bay, Dar es Salaam',
+    description: 'Luxury apartments with lake view',
+    monthlyDues: 35,
+    currency: 'Pi',
+    totalUnits: 80,
+    occupiedUnits: 72,
+    amenities: ['Security', 'Pool', 'Restaurant', 'Parking'],
+    image: '/ChatGPT Image Dec 25, 2025, 10_54_38 AM.png'
+  },
+  {
+    id: 'estate3',
+    name: 'Green Valley Residences',
+    location: 'Masaki, Dar es Salaam',
+    description: 'Family-friendly estate green with large spaces',
+    monthlyDues: 20,
+    currency: 'Pi',
+    totalUnits: 60,
+    occupiedUnits: 48,
+    amenities: ['Security', 'Garden', 'Kids Play Area', 'Parking'],
+    image: '/Gemini_Generated_Image_wonq05wonq05wonq.png'
+  },
+  {
+    id: 'estate4',
+    name: 'Downtown Heights',
+    location: 'City Center, Dar es Salaam',
+    description: 'Urban living in the heart of the city',
+    monthlyDues: 40,
+    currency: 'Pi',
+    totalUnits: 200,
+    occupiedUnits: 180,
+    amenities: ['Security', 'Gym', 'Rooftop', 'Concierge'],
+    image: undefined
+  },
+];
 
 const HousingPage: React.FC = () => {
   const { user } = useAuth();
   const [estates, setEstates] = useState<Estate[]>([]);
-  const [properties, setProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedEstate, setSelectedEstate] = useState<Estate | null>(null);
 
-  // Sample estates for demo
-  const sampleEstates: Estate[] = [
-    {
-      id: 'estate1',
-      name: 'Sunrise Gardens Estate',
-      location: 'Mikocheni, Dar es Salaam',
-      description: 'Modern residential estate with excellent amenities',
-      monthlyDues: 25,
-      currency: 'Pi',
-      totalUnits: 120,
-      occupiedUnits: 95,
-      amenities: ['Security', 'Pool', 'Gym', 'Parking'],
-      image: '/IMG-20250709-WA0014.jpg'
-    },
-    {
-      id: 'estate2',
-      name: 'Lakeside View Apartments',
-      location: 'Oyster Bay, Dar es Salaam',
-      description: 'Luxury apartments with lake view',
-      monthlyDues: 35,
-      currency: 'Pi',
-      totalUnits: 80,
-      occupiedUnits: 72,
-      amenities: ['Security', 'Pool', 'Restaurant', 'Parking'],
-      image: '/ChatGPT Image Dec 25, 2025, 10_54_38 AM.png'
-    },
-    {
-      id: 'estate3',
-      name: 'Green Valley Residences',
-      location: 'Masaki, Dar es Salaam',
-      description: 'Family-friendly estate green with large spaces',
-      monthlyDues: 20,
-      currency: 'Pi',
-      totalUnits: 60,
-      occupiedUnits: 48,
-      amenities: ['Security', 'Garden', 'Kids Play Area', 'Parking'],
-      image: '/Gemini_Generated_Image_wonq05wonq05wonq.png'
-    },
-    {
-      id: 'estate4',
-      name: 'Downtown Heights',
-      location: 'City Center, Dar es Salaam',
-      description: 'Urban living in the heart of the city',
-      monthlyDues: 40,
-      currency: 'Pi',
-      totalUnits: 200,
-      occupiedUnits: 180,
-      amenities: ['Security', 'Gym', 'Rooftop', 'Concierge'],
-      image: undefined
-    },
-  ];
+  // Memoize sampleEstates to keep reference stable
+  const sampleEstates = useMemo(() => sampleEstatesData, []);
 
   useEffect(() => {
     const fetchEstates = async () => {
@@ -77,7 +79,6 @@ const HousingPage: React.FC = () => {
         console.log('Estates query result:', estatesSnap.size, 'documents');
         
         if (estatesSnap.empty) {
-          // Use sample data if Firestore is empty
           console.log('No estates in Firestore, using sample data');
           setEstates(sampleEstates);
         } else {
@@ -87,13 +88,11 @@ const HousingPage: React.FC = () => {
           } as Estate));
           setEstates(estatesData);
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error('Error fetching estates:', error);
-        // Check for permission error
-        if (error?.code === 'permission-denied' || error?.message?.includes('permission')) {
+        if (error instanceof Error && (error.message.includes('permission') || error.message.includes('Permission'))) {
           console.warn('Firestore permission error - using sample data. Check Firestore rules.');
         }
-        // Fallback to sample data on error
         setEstates(sampleEstates);
       } finally {
         setLoading(false);
@@ -101,7 +100,7 @@ const HousingPage: React.FC = () => {
     };
 
     fetchEstates();
-  }, []);
+  }, [sampleEstates]);
 
   const handleSelectEstate = async (estate: Estate) => {
     setSelectedEstate(estate);
@@ -119,17 +118,14 @@ const HousingPage: React.FC = () => {
       alert('Demo Mode: Payment simulation - would pay ' + estate.monthlyDues + ' Pi for ' + estate.name);
       return;
     }
-    // Navigation to payment will be handled by the main payment module
     alert(`Initiating payment of ${estate.monthlyDues} Pi for ${estate.name}`);
   };
 
-  // Get user estate location (either from logged in user or demo)
   const displayEstateLocation = user?.estateLocation || 'Sunrise Gardens Estate';
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#1A237E] to-[#283593] text-white p-4">
       <div className="max-w-6xl mx-auto">
-        {/* Header */}
         <div className="mb-8">
           <Link href="/">
             <button className="mb-6 bg-[#FFD700] text-[#1A237E] hover:bg-[#FFC700] px-4 py-2 rounded font-semibold transition">
@@ -140,11 +136,10 @@ const HousingPage: React.FC = () => {
           <p className="text-[#FFD700] text-lg">Manage your property and pay monthly dues</p>
         </div>
 
-        {/* Demo Notice */}
         {!user && (
           <div className="bg-yellow-500/20 border border-yellow-400 rounded-lg p-4 mb-6">
             <p className="text-yellow-200 text-sm">
-              📌 Demo Mode: You're viewing sample data. Login to see your real profile.
+              📌 Demo Mode: You&apos;re viewing sample data. Login to see your real profile.
             </p>
           </div>
         )}
@@ -153,7 +148,6 @@ const HousingPage: React.FC = () => {
           <div className="text-center py-12">Loading estates...</div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Estates List */}
             <div className="lg:col-span-2">
               <h2 className="text-2xl font-bold mb-4">Available Estates</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -167,9 +161,9 @@ const HousingPage: React.FC = () => {
                     }`}
                     onClick={() => handleSelectEstate(estate)}
                   >
-                    {/* Estate Image */}
                     <div className="h-32 mb-4 rounded-lg bg-gray-700 flex items-center justify-center overflow-hidden">
                       {estate.image ? (
+                        // eslint-disable-next-line @next/next/no-img-element
                         <img 
                           src={estate.image} 
                           alt={estate.name}
@@ -214,7 +208,6 @@ const HousingPage: React.FC = () => {
               </div>
             </div>
 
-            {/* My Property Section */}
             <div className="bg-white/10 rounded-lg p-6 backdrop-blur">
               <h2 className="text-2xl font-bold mb-4">My Property</h2>
               <div className="space-y-3">
@@ -248,3 +241,4 @@ const HousingPage: React.FC = () => {
 };
 
 export default HousingPage;
+

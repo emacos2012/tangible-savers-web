@@ -8,6 +8,7 @@ interface InvestmentCardProps {
 }
 
 export default function InvestmentCard({ userId }: InvestmentCardProps) {
+  // Use static dates for sample data to avoid impure function calls during render
   const [investments, setInvestments] = useState<Investment[]>([
     {
       id: '1',
@@ -19,7 +20,7 @@ export default function InvestmentCard({ userId }: InvestmentCardProps) {
       currentValue: 115,
       riskLevel: 'medium',
       status: 'active',
-      purchasedAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+      purchasedAt: new Date('2024-12-01'),
     },
     {
       id: '2',
@@ -31,7 +32,7 @@ export default function InvestmentCard({ userId }: InvestmentCardProps) {
       currentValue: 520,
       riskLevel: 'low',
       status: 'active',
-      purchasedAt: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000),
+      purchasedAt: new Date('2024-10-01'),
     },
   ]);
 

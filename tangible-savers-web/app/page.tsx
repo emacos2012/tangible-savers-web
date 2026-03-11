@@ -1,7 +1,9 @@
+
 'use client';
 
 import { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useAuth } from '@/lib/authContext';
 import WalletCard from '@/components/WalletCard';
 import InvestmentCard from '@/components/InvestmentCard';
@@ -204,9 +206,11 @@ export default function Home() {
                   </div>
                   {cat.image && (
                     <div className="w-32 h-32 bg-white/20 rounded-lg overflow-hidden flex-shrink-0">
-                      <img 
+                      <Image 
                         src={cat.image} 
                         alt={cat.name}
+                        width={128}
+                        height={128}
                         className="w-full h-full object-cover"
                       />
                     </div>

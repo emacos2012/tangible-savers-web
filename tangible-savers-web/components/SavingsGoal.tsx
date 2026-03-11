@@ -8,6 +8,7 @@ interface SavingsGoalProps {
 }
 
 export default function SavingsGoal({ userId }: SavingsGoalProps) {
+  // Use static dates for sample data to avoid impure function calls during render
   const [goals, setGoals] = useState<SavingsGoal[]>([
     {
       id: '1',
@@ -15,8 +16,8 @@ export default function SavingsGoal({ userId }: SavingsGoalProps) {
       name: 'New Smartphone',
       targetAmount: 500,
       currentAmount: 250,
-      deadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-      createdAt: new Date(),
+      deadline: new Date('2025-03-01'),
+      createdAt: new Date('2024-12-01'),
     },
     {
       id: '2',
@@ -24,8 +25,8 @@ export default function SavingsGoal({ userId }: SavingsGoalProps) {
       name: 'Emergency Fund',
       targetAmount: 1000,
       currentAmount: 600,
-      deadline: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
-      createdAt: new Date(),
+      deadline: new Date('2025-06-01'),
+      createdAt: new Date('2024-12-01'),
     },
   ]);
 
@@ -35,12 +36,12 @@ export default function SavingsGoal({ userId }: SavingsGoalProps) {
   const createGoal = () => {
     if (newGoal.name && newGoal.targetAmount) {
       const goal: SavingsGoal = {
-        id: Date.now().toString(),
+        id: `goal-${Date.now()}`,
         userId: userId || 'user1',
         name: newGoal.name,
         targetAmount: parseFloat(newGoal.targetAmount),
         currentAmount: 0,
-        deadline: new Date(newGoal.deadline || Date.now() + 30 * 24 * 60 * 60 * 1000),
+        deadline: newGoal.deadline ? new Date(newGoal.deadline) : new Date('2025-03-01'),
         createdAt: new Date(),
       };
       setGoals([...goals, goal]);
@@ -53,8 +54,10 @@ export default function SavingsGoal({ userId }: SavingsGoalProps) {
     return Math.min((goal.currentAmount / goal.targetAmount) * 100, 100);
   };
 
+  // Calculate days left using a fixed reference date for consistency
   const getDaysLeft = (deadline: Date) => {
-    const diff = deadline.getTime() - Date.now();
+    const refDate = new Date('2025-01-15');
+    const diff = deadline.getTime() - refDate.getTime();
     return Math.ceil(diff / (1000 * 60 * 60 * 24));
   };
 

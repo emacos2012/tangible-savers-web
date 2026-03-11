@@ -13,14 +13,14 @@ export default function WalletCard({ wallet, userId }: WalletCardProps) {
   const [showAddFunds, setShowAddFunds] = useState(false);
   const [amount, setAmount] = useState('');
 
-  // Sample transactions
+  // Sample transactions with static dates to avoid impure function calls
   const transactions: WalletTransaction[] = [
     {
       id: '1',
       type: 'credit',
       amount: 50,
       description: 'Received from John',
-      timestamp: new Date(Date.now() - 3600000),
+      timestamp: new Date('2025-01-14T10:00:00'),
       status: 'completed',
     },
     {
@@ -28,7 +28,7 @@ export default function WalletCard({ wallet, userId }: WalletCardProps) {
       type: 'debit',
       amount: 25.50,
       description: 'Shopping Mall Purchase',
-      timestamp: new Date(Date.now() - 86400000),
+      timestamp: new Date('2025-01-13T14:30:00'),
       status: 'completed',
     },
     {
@@ -36,7 +36,7 @@ export default function WalletCard({ wallet, userId }: WalletCardProps) {
       type: 'credit',
       amount: 100,
       description: 'Wallet Top-up',
-      timestamp: new Date(Date.now() - 172800000),
+      timestamp: new Date('2025-01-12T09:15:00'),
       status: 'completed',
     },
   ];
