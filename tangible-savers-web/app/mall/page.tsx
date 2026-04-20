@@ -1,12 +1,28 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { collection, getDocs, addDoc, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/lib/authContext';
 import { Product, CartItem, Order } from '@/lib/types';
 import { initiatePiPayment } from '@/lib/piPayments';
 import Link from 'next/link';
+
+// Sample products for demo (defined outside component)
+const sampleProductsData: Product[] = [
+  { id: 'p1', name: 'Organic Rice 5kg', description: 'Premium organic rice from local farms', price: 15, category: 'groceries', stock: 50, sellerId: 'seller1' },
+  { id: 'p2', name: 'Fresh Vegetables Bundle', description: 'Fresh seasonal vegetables', price: 8, category: 'groceries', stock: 30, sellerId: 'seller1' },
+  { id: 'p3', name: 'Cooking Oil 2L', description: 'Pure sunflower cooking oil', price: 12, category: 'groceries', stock: 45, sellerId: 'seller1' },
+  { id: 'p4', name: 'Sugar 1kg', description: 'Fine crystal sugar', price: 5, category: 'groceries', stock: 60, sellerId: 'seller1' },
+  { id: 'p5', name: 'Smartphone X12', description: 'Latest model smartphone with great features', price: 350, category: 'electronics', stock: 15, sellerId: 'seller2' },
+  { id: 'p6', name: 'Wireless Earbuds', description: 'High quality wireless earbuds with noise cancellation', price: 45, category: 'electronics', stock: 40, sellerId: 'seller2' },
+  { id: 'p7', name: 'Portable Charger', description: '20000mAh power bank', price: 25, category: 'electronics', stock: 35, sellerId: 'seller2' },
+  { id: 'p8', name: 'Smart Watch', description: 'Fitness tracker with heart rate monitor', price: 80, category: 'electronics', stock: 20, sellerId: 'seller2' },
+  { id: 'p9', name: 'Bedsheet Set', description: 'Queen size bedsheet with pillow covers', price: 30, category: 'home_goods', stock: 25, sellerId: 'seller3' },
+  { id: 'p10', name: 'Kitchen Utensils Set', description: 'Complete kitchen utensils for cooking', price: 40, category: 'home_goods', stock: 18, sellerId: 'seller3' },
+  { id: 'p11', name: 'Wall Clock', description: 'Modern decorative wall clock', price: 18, category: 'home_goods', stock: 30, sellerId: 'seller3' },
+  { id: 'p12', name: 'LED Lamp', description: 'Energy saving LED desk lamp', price: 22, category: 'home_goods', stock: 28, sellerId: 'seller3' },
+];
 
 const ShoppingMallPage: React.FC = () => {
   const { user } = useAuth();
@@ -23,21 +39,8 @@ const ShoppingMallPage: React.FC = () => {
     { id: 'home_goods', name: '🏠 Home Goods' },
   ];
 
-  // Sample products for demo
-  const sampleProducts: Product[] = [
-    { id: 'p1', name: 'Organic Rice 5kg', description: 'Premium organic rice from local farms', price: 15, category: 'groceries', stock: 50, sellerId: 'seller1' },
-    { id: 'p2', name: 'Fresh Vegetables Bundle', description: 'Fresh seasonal vegetables', price: 8, category: 'groceries', stock: 30, sellerId: 'seller1' },
-    { id: 'p3', name: 'Cooking Oil 2L', description: 'Pure sunflower cooking oil', price: 12, category: 'groceries', stock: 45, sellerId: 'seller1' },
-    { id: 'p4', name: 'Sugar 1kg', description: 'Fine crystal sugar', price: 5, category: 'groceries', stock: 60, sellerId: 'seller1' },
-    { id: 'p5', name: 'Smartphone X12', description: 'Latest model smartphone with great features', price: 350, category: 'electronics', stock: 15, sellerId: 'seller2' },
-    { id: 'p6', name: 'Wireless Earbuds', description: 'High quality wireless earbuds with noise cancellation', price: 45, category: 'electronics', stock: 40, sellerId: 'seller2' },
-    { id: 'p7', name: 'Portable Charger', description: '20000mAh power bank', price: 25, category: 'electronics', stock: 35, sellerId: 'seller2' },
-    { id: 'p8', name: 'Smart Watch', description: 'Fitness tracker with heart rate monitor', price: 80, category: 'electronics', stock: 20, sellerId: 'seller2' },
-    { id: 'p9', name: 'Bedsheet Set', description: 'Queen size bedsheet with pillow covers', price: 30, category: 'home_goods', stock: 25, sellerId: 'seller3' },
-    { id: 'p10', name: 'Kitchen Utensils Set', description: 'Complete kitchen utensils for cooking', price: 40, category: 'home_goods', stock: 18, sellerId: 'seller3' },
-    { id: 'p11', name: 'Wall Clock', description: 'Modern decorative wall clock', price: 18, category: 'home_goods', stock: 30, sellerId: 'seller3' },
-    { id: 'p12', name: 'LED Lamp', description: 'Energy saving LED desk lamp', price: 22, category: 'home_goods', stock: 28, sellerId: 'seller3' },
-  ];
+  // Memoize sample products to keep reference stable
+  const sampleProducts = useMemo(() => sampleProductsData, []);
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -50,7 +53,6 @@ const ShoppingMallPage: React.FC = () => {
         console.log('Products query result:', productsSnap.size, 'documents');
         
         if (productsSnap.empty) {
-          // Use sample data if Firestore is empty
           console.log('No products in Firestore, using sample data');
           const filteredProducts = sampleProducts.filter(p => p.category === selectedCategory);
           setProducts(filteredProducts);
@@ -61,13 +63,11 @@ const ShoppingMallPage: React.FC = () => {
           } as Product));
           setProducts(productsData);
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error('Error fetching products:', error);
-        // Check for permission error
-        if (error?.code === 'permission-denied' || error?.message?.includes('permission')) {
+        if (error instanceof Error && (error.message.includes('permission') || error.message.includes('Permission'))) {
           console.warn('Firestore permission error - using sample data. Check Firestore rules.');
         }
-        // Fallback to sample data on error
         const filteredProducts = sampleProducts.filter(p => p.category === selectedCategory);
         setProducts(filteredProducts);
       } finally {
@@ -76,7 +76,7 @@ const ShoppingMallPage: React.FC = () => {
     };
 
     fetchProducts();
-  }, [selectedCategory]);
+  }, [selectedCategory, sampleProducts]);
 
   const addToCart = (product: Product) => {
     const existingItem = cart.find((item) => item.productId === product.id);
@@ -122,7 +122,6 @@ const ShoppingMallPage: React.FC = () => {
     try {
       setPaymentLoading(true);
 
-      // Create order
       const ordersRef = collection(db, 'orders');
       const orderDoc = await addDoc(ordersRef, {
         userId: user.uid,
@@ -134,7 +133,6 @@ const ShoppingMallPage: React.FC = () => {
         updatedAt: new Date(),
       } as Order);
 
-      // Initiate payment
       const { paymentId } = await initiatePiPayment(
         user.uid,
         parseFloat(getCartTotal()),
@@ -142,7 +140,6 @@ const ShoppingMallPage: React.FC = () => {
         'Mall Purchase'
       );
 
-      // Clear cart and show success
       setCart([]);
       alert(`Payment initiated! Order ID: ${orderDoc.id}`);
       setShowCart(false);
@@ -161,7 +158,6 @@ const ShoppingMallPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-white dark:bg-black p-4">
       <div className="max-w-6xl mx-auto">
-        {/* Header */}
         <div className="mb-8">
           <Link href="/">
             <button className="mb-6 bg-[#FFD700] text-[#1A237E] hover:bg-[#FFC700] px-4 py-2 rounded font-semibold transition">
@@ -173,9 +169,7 @@ const ShoppingMallPage: React.FC = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Products Section */}
           <div className="lg:col-span-3">
-            {/* Category Filter */}
             <div className="mb-6 flex gap-2 overflow-x-auto pb-2">
               {categories.map((cat) => (
                 <button
@@ -192,7 +186,6 @@ const ShoppingMallPage: React.FC = () => {
               ))}
             </div>
 
-            {/* Products Grid */}
             {loading ? (
               <div className="text-center py-12">Loading products...</div>
             ) : (
@@ -240,7 +233,6 @@ const ShoppingMallPage: React.FC = () => {
             )}
           </div>
 
-          {/* Cart Section */}
           <div
             className={`${
               showCart ? 'block' : 'hidden'
@@ -298,7 +290,6 @@ const ShoppingMallPage: React.FC = () => {
             )}
           </div>
 
-          {/* Mobile Cart Toggle */}
           <button
             onClick={() => setShowCart(!showCart)}
             className="lg:hidden fixed bottom-20 right-4 bg-[#FFD700] text-[#1A237E] p-4 rounded-full shadow-lg font-bold"
@@ -312,3 +303,4 @@ const ShoppingMallPage: React.FC = () => {
 };
 
 export default ShoppingMallPage;
+

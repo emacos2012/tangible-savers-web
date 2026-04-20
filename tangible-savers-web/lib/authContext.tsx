@@ -19,21 +19,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Listen for Firebase auth state changes
   useEffect(() => {
     // Wait for Pi SDK to be ready before initializing
+    let checkInterval: ReturnType<typeof setInterval> | null = null;
+    
     const initPiWhenReady = () => {
       // Check if Pi SDK is already ready
       if ((window as any).__PI_SDK_READY__ || (window as any).Pi) {
         initializePiSDK().catch(err => console.error('Failed to initialize Pi SDK:', err));
       } else {
         // Wait for the script to set the flag
-        const checkInterval = setInterval(() => {
+        checkInterval = setInterval(() => {
           if ((window as any).__PI_SDK_READY__ || (window as any).Pi) {
-            clearInterval(checkInterval);
+            if (checkInterval) clearInterval(checkInterval);
             initializePiSDK().catch(err => console.error('Failed to initialize Pi SDK:', err));
           }
         }, 500);
-        
-        // Clean up interval on unmount
-        return () => clearInterval(checkInterval);
       }
     };
     
@@ -76,6 +75,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => {
       unsubscribe();
       clearTimeout(timeoutId);
+      if (checkInterval) clearInterval(checkInterval);
     };
   }, []);
 

@@ -1,14 +1,16 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  output: "export",
-  turbopack: {
-    root: "./",
-  },
+  // Remove output: export to enable API routes for Pi payment processing
+  // Use "output: export" only when deploying to static hosting without server
   images: {
     unoptimized: true,
   },
-  /* config options here */
+  // Handle external scripts
+  experimental: {
+    // Optimize package imports
+    optimizePackageImports: ['firebase', '@firebase'],
+  },
 };
 
 export default nextConfig;

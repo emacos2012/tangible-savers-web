@@ -3,35 +3,83 @@ import { db } from './firebase';
 import { doc, setDoc, getDoc, updateDoc } from 'firebase/firestore';
 import { User } from './types';
 
+// Wait for Pi SDK to be ready
+export const waitForPiSDK = (timeout: number = 30000): Promise<void> => {
+  return new Promise((resolve, reject) => {
+    if ((window as any).Pi) {
+      resolve();
+      return;
+    }
+
+    let attempts = 0;
+    const interval = setInterval(() => {
+      attempts += 500;
+      if ((window as any).Pi) {
+        clearInterval(interval);
+        resolve();
+      } else if (attempts >= timeout) {
+        clearInterval(interval);
+        reject(new Error('Pi SDK failed to load'));
+      }
+    }, 500);
+  });
+};
+
 export const isPiSDKReady = (): boolean => {
   return !!(window as any).__PI_SDK_READY__ || !!(window as any).Pi;
 };
 
 export const initializePiSDK = async (): Promise<void> => {
   try {
+    // Wait for Pi SDK to be available first
+    await waitForPiSDK();
+    
     const pi = (window as any).Pi;
     if (!pi) {
-      return;
+      throw new Error('Pi SDK not available');
     }
     await pi.init({ version: '2.0', appName: 'Tangible Savers' });
   } catch (error) {
-    // Silent fail - SDK will be used when available
+    console.error('Failed to initialize Pi SDK:', error);
+    // Don't throw - allow retry on authentication
   }
 };
 
 export const authenticateWithPiSDK = async (): Promise<{ piUid: string; username: string }> => {
+  try {
+    // Wait for Pi SDK to be ready first
+    await waitForPiSDK(10000);
+  } catch (error) {
+    throw new Error('Pi SDK is taking too long to load. Please check your internet connection and refresh the page.');
+  }
+
   const pi = (window as any).Pi;
   
   if (!pi) {
-    throw new Error('Pi SDK is still loading. Please try again in a moment.');
+    throw new Error('Pi SDK is not available. Please refresh the page and try again.');
   }
 
-  const piAuth = await pi.authenticate(['username']);
-  
-  return {
-    piUid: piAuth.accessToken || piAuth.user?.uid || String(Math.random()),
-    username: piAuth.user?.username || 'PiUser',
-  };
+  try {
+    // Initialize if not already done
+    try {
+      await pi.init({ version: '2.0', appName: 'Tangible Savers' });
+    } catch (initError) {
+      // Already initialized or version mismatch - continue with auth
+    }
+
+    const piAuth = await pi.authenticate(['username']);
+    
+    return {
+      piUid: piAuth.accessToken || piAuth.user?.uid || String(Math.random()),
+      username: piAuth.user?.username || 'PiUser',
+    };
+  } catch (error: any) {
+    console.error('Pi authentication error:', error);
+    if (error.message?.includes('network') || error.message?.includes('offline')) {
+      throw new Error('Network error. Please check your internet connection and try again.');
+    }
+    throw error;
+  }
 };
 
 export const syncUserWithFirebase = async (

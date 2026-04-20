@@ -1,12 +1,49 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { collection, getDocs, query, where, addDoc, updateDoc, doc } from 'firebase/firestore';
+import React, { useEffect, useState, useMemo } from 'react';
+import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/lib/authContext';
 import { DeliveryTask, MoverRequest } from '@/lib/types';
 import { requestMover } from '@/lib/piPayments';
 import Link from 'next/link';
+
+// Sample data for demo (defined outside component)
+const sampleDeliveriesData: DeliveryTask[] = [
+  {
+    id: 'del1',
+    orderId: 'ORD-001',
+    userId: 'demo',
+    pickupAddress: 'Mall Warehouse, Dar es Salaam',
+    deliveryAddress: 'Mikocheni, Dar es Salaam',
+    status: 'delivered',
+    createdAt: new Date('2024-01-15'),
+    updatedAt: new Date('2024-01-16'),
+  },
+  {
+    id: 'del2',
+    orderId: 'ORD-002',
+    userId: 'demo',
+    pickupAddress: 'Electronics Store, Dar es Salaam',
+    deliveryAddress: 'Oyster Bay, Dar es Salaam',
+    status: 'in_transit',
+    estimatedDeliveryTime: new Date('2024-01-20'),
+    createdAt: new Date('2024-01-18'),
+    updatedAt: new Date('2024-01-19'),
+  },
+];
+
+const sampleMoverRequestsData: MoverRequest[] = [
+  {
+    id: 'mover1',
+    userId: 'demo',
+    fromAddress: 'Old Apartment, Masaki',
+    toAddress: 'New House, Mikocheni',
+    movingDate: new Date('2024-02-01'),
+    status: 'accepted',
+    createdAt: new Date('2024-01-10'),
+  },
+];
 
 const LogisticsPage: React.FC = () => {
   const { user } = useAuth();
@@ -21,47 +58,13 @@ const LogisticsPage: React.FC = () => {
   });
   const [submitting, setSubmitting] = useState(false);
 
-  // Sample data for demo
-  const sampleDeliveries: DeliveryTask[] = [
-    {
-      id: 'del1',
-      orderId: 'ORD-001',
-      userId: 'demo',
-      pickupAddress: 'Mall Warehouse, Dar es Salaam',
-      deliveryAddress: 'Mikocheni, Dar es Salaam',
-      status: 'delivered',
-      createdAt: new Date('2024-01-15'),
-      updatedAt: new Date('2024-01-16'),
-    },
-    {
-      id: 'del2',
-      orderId: 'ORD-002',
-      userId: 'demo',
-      pickupAddress: 'Electronics Store, Dar es Salaam',
-      deliveryAddress: 'Oyster Bay, Dar es Salaam',
-      status: 'in_transit',
-      estimatedDeliveryTime: new Date('2024-01-20'),
-      createdAt: new Date('2024-01-18'),
-      updatedAt: new Date('2024-01-19'),
-    },
-  ];
-
-  const sampleMoverRequests: MoverRequest[] = [
-    {
-      id: 'mover1',
-      userId: 'demo',
-      fromAddress: 'Old Apartment, Masaki',
-      toAddress: 'New House, Mikocheni',
-      movingDate: new Date('2024-02-01'),
-      status: 'accepted',
-      createdAt: new Date('2024-01-10'),
-    },
-  ];
+  // Memoize sample data to keep reference stable
+  const sampleDeliveries = useMemo(() => sampleDeliveriesData, []);
+  const sampleMoverRequests = useMemo(() => sampleMoverRequestsData, []);
 
   useEffect(() => {
     const fetchData = async () => {
       if (!user) {
-        // Use sample data when not logged in
         setDeliveries(sampleDeliveries);
         setMoverRequests(sampleMoverRequests);
         setLoading(false);
@@ -69,7 +72,6 @@ const LogisticsPage: React.FC = () => {
       }
 
       try {
-        // Fetch deliveries for user
         const deliveriesRef = collection(db, 'deliveryTasks');
         const deliveriesQuery = query(deliveriesRef, where('userId', '==', user.uid));
         const deliveriesSnap = await getDocs(deliveriesQuery);
@@ -80,13 +82,12 @@ const LogisticsPage: React.FC = () => {
           const deliveriesData = deliveriesSnap.docs.map((doc) => ({
             id: doc.id,
             ...doc.data(),
-            createdAt: (doc.data() as any).createdAt?.toDate(),
-            updatedAt: (doc.data() as any).updatedAt?.toDate(),
+            createdAt: (doc.data() as unknown as { createdAt: { toDate: () => Date } }).createdAt?.toDate(),
+            updatedAt: (doc.data() as unknown as { updatedAt: { toDate: () => Date } }).updatedAt?.toDate(),
           } as DeliveryTask));
           setDeliveries(deliveriesData);
         }
 
-        // Fetch mover requests
         const moversRef = collection(db, 'moverRequests');
         const moversQuery = query(moversRef, where('userId', '==', user.uid));
         const moversSnap = await getDocs(moversQuery);
@@ -97,14 +98,13 @@ const LogisticsPage: React.FC = () => {
           const moversData = moversSnap.docs.map((doc) => ({
             id: doc.id,
             ...doc.data(),
-            movingDate: (doc.data() as any).movingDate?.toDate(),
-            createdAt: (doc.data() as any).createdAt?.toDate(),
+            movingDate: (doc.data() as unknown as { movingDate: { toDate: () => Date } }).movingDate?.toDate(),
+            createdAt: (doc.data() as unknown as { createdAt: { toDate: () => Date } }).createdAt?.toDate(),
           } as MoverRequest));
           setMoverRequests(moversData);
         }
       } catch (error) {
         console.error('Error fetching logistics data:', error);
-        // Fallback to sample data on error
         setDeliveries(sampleDeliveries);
         setMoverRequests(sampleMoverRequests);
       } finally {
@@ -113,7 +113,7 @@ const LogisticsPage: React.FC = () => {
     };
 
     fetchData();
-  }, [user]);
+  }, [user, sampleDeliveries, sampleMoverRequests]);
 
   const handleMoverSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -212,7 +212,6 @@ const LogisticsPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-white dark:bg-black p-4">
       <div className="max-w-6xl mx-auto">
-        {/* Header */}
         <div className="mb-8">
           <Link href="/">
             <button className="mb-6 bg-[#FFD700] text-[#1A237E] hover:bg-[#FFC700] px-4 py-2 rounded font-semibold transition">
@@ -227,7 +226,6 @@ const LogisticsPage: React.FC = () => {
           <div className="text-center py-12">Loading logistics data...</div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Deliveries Section */}
             <div className="lg:col-span-2">
               <h2 className="text-2xl font-bold text-[#1A237E] dark:text-[#FFD700] mb-4">📦 Order Deliveries</h2>
 
@@ -269,7 +267,6 @@ const LogisticsPage: React.FC = () => {
                         )}
                       </div>
 
-                      {/* Status Progress */}
                       <div className="flex items-center gap-2 text-xs">
                         <span
                           className={`px-2 py-1 rounded ${
@@ -310,7 +307,6 @@ const LogisticsPage: React.FC = () => {
               )}
             </div>
 
-            {/* Movers Section */}
             <div className="bg-gray-100 dark:bg-gray-900 rounded-lg p-4">
               <h2 className="text-2xl font-bold text-[#1A237E] dark:text-[#FFD700] mb-4">🚚 Relocation</h2>
 
@@ -374,7 +370,6 @@ const LogisticsPage: React.FC = () => {
                 </form>
               )}
 
-              {/* Mover Requests List */}
               {moverRequests.length > 0 ? (
                 <div className="space-y-3">
                   {moverRequests.map((request) => (
@@ -413,3 +408,4 @@ const LogisticsPage: React.FC = () => {
 };
 
 export default LogisticsPage;
+

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { useAuth } from '@/lib/authContext';
 
 export default function AdminLoginPage() {
@@ -119,13 +120,13 @@ export default function AdminLoginPage() {
         </div>
 
         <div className="mt-8 text-center">
-          <a href="/login" className="text-[#FFD700] hover:underline">
+          <Link href="/login" className="text-[#FFD700] hover:underline">
             ← Back to User Login
-          </a>
+          </Link>
           <span className="mx-2 text-gray-500">|</span>
-          <a href="/" className="text-gray-400 hover:underline">
+          <Link href="/" className="text-gray-400 hover:underline">
             ← Back to Home
-          </a>
+          </Link>
         </div>
       </div>
     </div>

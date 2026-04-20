@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import axios from 'axios';
-import { db } from '@/lib/firebase';
 import { doc, getDoc, updateDoc, setDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 export async function POST(request: Request) {
   const { paymentId, txid } = await request.json();
@@ -13,6 +13,11 @@ export async function POST(request: Request) {
 
   if (!PI_API_KEY) {
     return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+  }
+
+  // Skip database operations during build time
+  if (process.env.NEXT_PHASE === 'phase-production-build') {
+    return NextResponse.json({ message: 'Build mode - skipping payment', txid }, { status: 200 });
   }
 
   try {
